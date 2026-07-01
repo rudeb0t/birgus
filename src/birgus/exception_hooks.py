@@ -1,0 +1,159 @@
+import asyncio
+import importlib.util
+import linecache
+import logging
+import sys
+import traceback
+import threading
+import warnings
+
+from types import TracebackType
+from typing import Type, Optional, Any
+
+from .classes import FrameList, LocalVarList, SourceContext
+from .exception_report import exception_report
+from .transports import DEFAULT_TRANSPORTS, TransportList
+
+
+logger = logging.getLogger(__name__)
+
+_VALUE_REPR_LIMIT: int = 1000
+
+
+class ExceptionHook:
+    transports: TransportList = DEFAULT_TRANSPORTS
+
+    def __call__(
+        self,
+        exc_type: Type[BaseException],
+        exc_value: BaseException,
+        exc_traceback: TracebackType | None,
+    ) -> None:
+        traceback = extract_traceback_data(exc_traceback)
+
+        report = create_report(exc_type, exc_value, traceback)
+        self.send_report(report)
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+    def send_report(self, report: Any) -> None:
+        for transport in self.transports:
+            try:
+                transport.send(report)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to send exception report via %r: %r", transport, exc
+                )
+
+
+exception_hook = ExceptionHook()
+
+
+def get_source_context(
+    filename: str, target_lineno: int, context_lines: int = 2
+) -> SourceContext:
+    source_lines: SourceContext = []
+
+    start = max(1, target_lineno - context_lines)
+    end = target_lineno + context_lines + 1
+
+    for current_lineno in range(start, end):
+        line = linecache.getline(filename, current_lineno).rstrip()
+        if line:
+            source_lines.append(
+                {
+                    "lineno": current_lineno,
+                    "code": line,
+                    "isTarget": current_lineno == target_lineno,
+                }
+            )
+
+    return source_lines
+
+
+def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
+    frames: FrameList = []
+
+    for frame_obj, lineno in traceback.walk_tb(exc_traceback):
+        local_vars: LocalVarList = []
+
+        for name, value in frame_obj.f_locals.items():
+            value_trunc = False
+            try:
+                value_repr = repr(value)
+                if len(value_repr) > _VALUE_REPR_LIMIT:
+                    value_repr = value_repr[:_VALUE_REPR_LIMIT] + "..."
+                    value_trunc = True
+
+            except Exception:
+                value_repr = "<Unrepresentable Object>"
+
+            local_vars.append(
+                {
+                    "name": str(name),
+                    "typeName": type(value).__name__,
+                    "valueRepr": value_repr,
+                    "valueTrunc": value_trunc,
+                }
+            )
+
+        frames.append(
+            {
+                "filename": frame_obj.f_code.co_filename,
+                "lineno": lineno,
+                "functionName": frame_obj.f_code.co_name,
+                "locals": local_vars,
+                "sourceContext": get_source_context(
+                    frame_obj.f_code.co_filename, lineno
+                ),
+            }
+        )
+
+    return frames
+
+
+def create_report(
+    exc_type: Type[BaseException], exc_value: BaseException, traceback: FrameList
+) -> Any:
+    report = exception_report.ExceptionReport.new_message()
+    print(type(report))
+    report.exceptionType = str(exc_type.__name__)
+    report.exceptionValue = str(exc_value)
+    report.traceback = traceback
+
+    return report
+
+
+def asyncio_exception_hook(
+    loop: asyncio.AbstractEventLoop, context: dict["str", Any]
+) -> None:
+    exc = context.get("exception")
+
+    if exc is not None:
+        exc_type = type(exc)
+        exc_value = exc
+        exc_traceback = exc.__traceback__
+        exception_hook(exc_type, exc_value, exc_traceback)
+
+    loop.default_exception_handler(context)
+
+
+def threading_exception_hook(args: threading.ExceptHookArgs) -> None:
+    exception_hook(args.exc_type, args.exc_value, args.exc_traceback)  # type: ignore[arg-type]
+
+
+def install(
+    loop: asyncio.AbstractEventLoop | None = None,
+    transports: TransportList = DEFAULT_TRANSPORTS,
+) -> None:
+    if importlib.util.find_spec("temporalio") is not None:
+        warnings.warn(
+            "Temporal SDK detected. Installing exception hooks may interfere with Temporal's own exception handling. Proceed with caution.",
+            UserWarning,
+        )
+
+    exception_hook.transports = transports
+    sys.excepthook = exception_hook
+    threading.excepthook = threading_exception_hook
+
+    if loop is not None:
+        loop.set_exception_handler(asyncio_exception_hook)
