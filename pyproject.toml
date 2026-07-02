@@ -1,7 +1,7 @@
 [project]
 name = "birgus"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight, low-friction library for capturing tracebacks in Python applications."
 readme = "README.md"
 authors = [
     { name = "Nimrod Abing", email = "nimrod.abing@gmail.com" }
