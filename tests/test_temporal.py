@@ -1,5 +1,5 @@
+import glob
 import os
-import uuid
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -54,14 +54,16 @@ class FailingActivityWorkflow:
 
 
 def test_birgus_send_report(
-    activity_env: ActivityEnvironment, sample_report_bytes: bytes, fake_uuid: uuid.UUID
+    activity_env: ActivityEnvironment,
+    sample_report_bytes: bytes,
+    fake_monotonic_ns: int,
 ) -> None:
-    with patch("birgus.transports.local_file.uuid.uuid4") as mocked_uuid4:
-        mocked_uuid4.return_value = fake_uuid
+    with patch("birgus.transports.base.time.monotonic_ns") as mocked_monotonic_ns:
+        mocked_monotonic_ns.return_value = fake_monotonic_ns
 
         activity_env.run(birgus_send_report, sample_report_bytes)
 
-        expected_filename = f"{fake_uuid}.birgus"
+        expected_filename = f"{fake_monotonic_ns}.birgus"
         assert os.path.exists(expected_filename)
 
         try:
@@ -71,21 +73,35 @@ def test_birgus_send_report(
 
 
 @pytest.mark.asyncio
-async def test_activity_interceptor() -> None:
+async def test_interceptor(fake_monotonic_ns: int) -> None:
     task_queue = "test-birgus-activity-interceptor"
-    with ThreadPoolExecutor() as activity_executor:
-        async with await WorkflowEnvironment.start_time_skipping() as env:
-            async with Worker(
-                env.client,
-                task_queue=task_queue,
-                workflows=[FailingActivityWorkflow],
-                activities=[failing_activity],
-                activity_executor=activity_executor,
-                interceptors=[BirgusWorkerInterceptor()],
-            ):
-                with pytest.raises(WorkflowFailureError):
-                    await env.client.execute_workflow(
-                        FailingActivityWorkflow.run,
-                        id="failing-activity-workflow",
-                        task_queue=task_queue,
-                    )
+    with patch("birgus.transports.base.time.monotonic_ns") as mocked_monotonic_ns:
+        mocked_monotonic_ns.return_value = fake_monotonic_ns
+        with ThreadPoolExecutor() as activity_executor:
+            async with await WorkflowEnvironment.start_time_skipping() as env:
+                async with Worker(
+                    env.client,
+                    task_queue=task_queue,
+                    workflows=[FailingActivityWorkflow],
+                    activities=[
+                        failing_activity,
+                        birgus_send_report,
+                    ],
+                    activity_executor=activity_executor,
+                    interceptors=[BirgusWorkerInterceptor()],
+                ):
+                    with pytest.raises(WorkflowFailureError):
+                        await env.client.execute_workflow(
+                            FailingActivityWorkflow.run,
+                            id="failing-activity-workflow",
+                            task_queue=task_queue,
+                        )
+
+    assert os.path.exists(f"activity-{fake_monotonic_ns}.birgus")
+    assert os.path.exists(f"workflow-{fake_monotonic_ns}.birgus")
+
+    for globbed_file in glob.glob("*.birgus"):
+        try:
+            os.remove(globbed_file)
+        except Exception:
+            pass

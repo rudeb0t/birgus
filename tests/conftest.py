@@ -1,7 +1,6 @@
-import uuid
 import pytest
 
 
 @pytest.fixture
-def fake_uuid() -> uuid.UUID:
-    return uuid.UUID("12345678-1234-5678-1234-567812345678")
+def fake_monotonic_ns() -> int:
+    return 772840958865291

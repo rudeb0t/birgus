@@ -35,10 +35,14 @@ class ExceptionHook:
         self.send_report(report)
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-    def send_report(self, report: Any) -> None:
+    def send_report(
+        self,
+        report: exception_report.ExceptionReport.Builder | bytes,
+        name_prefix: str = "",
+    ) -> None:
         for transport in self.transports:
             try:
-                transport.send(report)
+                transport.send(report, name_prefix)
             except Exception as exc:
                 logger.warning(
                     "Failed to send exception report via %r: %r", transport, exc
@@ -113,9 +117,8 @@ def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
 
 def create_report(
     exc_type: Type[BaseException], exc_value: BaseException, traceback: FrameList
-) -> Any:
+) -> exception_report.ExceptionReport.Builder:
     report = exception_report.ExceptionReport.new_message()
-    print(type(report))
     report.exceptionType = str(exc_type.__name__)
     report.exceptionValue = str(exc_value)
     report.traceback = traceback

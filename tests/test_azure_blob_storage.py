@@ -79,14 +79,17 @@ def test_transport_init() -> None:
     assert transport.prefix == "test-prefix"
 
 
-@patch("birgus.transports.azure_blob_storage.uuid.uuid4")
-def test_transport_generate_blob_name(mock_uuid: MagicMock) -> None:
-    mock_uuid.return_value = "12345678-1234-5678-1234-567812345678"
+@patch("birgus.transports.base.time.monotonic_ns")
+def test_transport_generate_blob_name(mock_monotonic_ns: MagicMock) -> None:
+    mock_monotonic_ns.return_value = 772840958865291
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport(
         container_name="test-container", prefix="errors"
     )
     blob_name = transport._generate_blob_name()
-    assert blob_name == "errors/12345678-1234-5678-1234-567812345678.birgus"
+    assert blob_name == "errors/772840958865291.birgus"
+
+    prefixed_blob_name = transport._generate_blob_name(name_prefix="prefix-")
+    assert prefixed_blob_name == "errors/prefix-772840958865291.birgus"
 
 
 def test_transport_send_success() -> None:

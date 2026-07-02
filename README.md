@@ -21,4 +21,7 @@ them to a file using Cap'n Proto serialization.
 ## What it's not
 
 Birgus is not meant to replace full-fledged application monitoring services
-like Sentry or Datadog.
+like Sentry or Datadog. If you can afford it, get Sentry, or set up a self-hosted
+instance.
+
+Only Python is supported for now.

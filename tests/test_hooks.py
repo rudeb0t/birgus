@@ -1,6 +1,5 @@
 import os
 import sys
-import uuid
 
 from unittest.mock import patch
 
@@ -16,13 +15,13 @@ def test_hook() -> None:
     )
 
 
-def test_exception_hook_writes_report(fake_uuid: uuid.UUID) -> None:
+def test_exception_hook_writes_report(fake_monotonic_ns: int) -> None:
     import birgus
 
     birgus.install()
 
-    with patch("birgus.transports.local_file.uuid.uuid4") as mocked_uuid4:
-        mocked_uuid4.return_value = fake_uuid
+    with patch("birgus.transports.base.time.monotonic_ns") as mocked_monotonic_ns:
+        mocked_monotonic_ns.return_value = fake_monotonic_ns
         try:
             raise ValueError("Test exception")
         except ValueError as exc:
@@ -32,7 +31,7 @@ def test_exception_hook_writes_report(fake_uuid: uuid.UUID) -> None:
 
             birgus.exception_hooks.exception_hook(exc_type, exc_value, exc_traceback)
 
-            expected_filename = f"{fake_uuid}.birgus"
+            expected_filename = f"{fake_monotonic_ns}.birgus"
             assert os.path.exists(expected_filename)
 
             try:

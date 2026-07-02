@@ -1,13 +1,13 @@
 import logging
 import os
-import uuid
 
 
 from azure.core.exceptions import AzureError
 from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
 from azure.storage.blob import BlobServiceClient as SyncBlobServiceClient
 
-from .base import AbstractTransport, exception_report
+from .base import AbstractTransport, TransportPayload
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,21 +67,28 @@ class AzureBlobStorageTransport(AbstractTransport):
         self.prefix = prefix.strip("/")
         self._client_factory = StorageClientFactory()
 
-    def _generate_blob_name(self) -> str:
-        return f"{self.prefix}/{uuid.uuid4()}.birgus"
+    def _generate_blob_name(self, name_prefix: str = "") -> str:
+        return f"{self.prefix}/{self.generate_name(name_prefix)}".strip("/")
 
-    def send(self, report: exception_report.ExceptionReport.Reader) -> None:
+    def send(
+        self,
+        report: TransportPayload,
+        name_prefix: str = "",
+    ) -> None:
         try:
             client = self._client_factory.get_client()
         except Exception as exc:
             logger.warning("Failed to initialize Azure Blob Storage client: %s", exc)
             return
 
-        report_bytes = report.to_bytes()
+        if isinstance(report, bytes):
+            report_bytes = report
+        else:
+            report_bytes = report.to_bytes()
         try:
             client.upload_blob(
                 container_name=self.container_name,
-                blob_name=self._generate_blob_name(),
+                blob_name=self._generate_blob_name(name_prefix),
                 data=report_bytes,
             )
         except AzureError as exc:
