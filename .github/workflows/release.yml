@@ -27,7 +27,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Run Tests
-        run: uv run --python ${{ matrix.python-version }} pytest
+        run: uv run --python ${{ matrix.python-version }} --all-extras pytest
 
   release:
     name: Build and Publish Release
