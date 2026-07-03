@@ -36,7 +36,6 @@ module-root = "src"
 [tool.pytest]
 asyncio_mode = "auto"
 markers = [
-    "integration: Marks tests as integration tests",
     "azure_blob_storage: Tests for Azure Blob Storage Transport",
     "temporal: Marks tests as Temporal Transport tests",
 ]
@@ -50,4 +49,5 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    "testcontainers[azurite]>=4.14.2",
 ]

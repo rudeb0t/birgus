@@ -7,7 +7,7 @@ from azure.core.exceptions import AzureError
 
 from birgus.transports.azure_blob_storage import (
     AzureBlobStorageTransport,
-    StorageClientFactory,
+    BlobServiceClientFactory,
 )
 
 
@@ -26,26 +26,24 @@ def clear_env(monkeypatch: pytest.MonkeyPatch) -> ClearEnvFixture:
 # =====================================================================
 
 
-@patch(
-    "birgus.transports.azure_blob_storage.SyncBlobServiceClient.from_connection_string"
-)
+@patch("birgus.transports.azure_blob_storage.BlobServiceClient.from_connection_string")
 @pytest.mark.azure_blob_storage
 def test_sync_client_with_azurite(
     mock_from_conn_str: MagicMock, clear_env: ClearEnvFixture
 ) -> None:
-    os.environ["AZURE_STORAGE_CONNECTION_STRING"] = "SyncConnStr"
+    os.environ["AZURE_STORAGE_CONNECTION_STRING"] = "ConnStr"
     mock_client: MagicMock = MagicMock()
     mock_from_conn_str.return_value = mock_client
 
-    factory: StorageClientFactory = StorageClientFactory()
-    client: MagicMock = factory.get_client()
+    factory: BlobServiceClientFactory = BlobServiceClientFactory()
+    client: MagicMock = factory.get_service_client()
 
     assert client == mock_client
-    mock_from_conn_str.assert_called_once_with("SyncConnStr")
+    mock_from_conn_str.assert_called_once_with("ConnStr")
 
 
-@patch("birgus.transports.azure_blob_storage.SyncDefaultAzureCredential")
-@patch("birgus.transports.azure_blob_storage.SyncBlobServiceClient")
+@patch("birgus.transports.azure_blob_storage.DefaultAzureCredential")
+@patch("birgus.transports.azure_blob_storage.BlobServiceClient")
 @pytest.mark.azure_blob_storage
 def test_sync_client_with_cloud(
     mock_blob_client_class: MagicMock,
@@ -56,8 +54,8 @@ def test_sync_client_with_cloud(
     mock_client: MagicMock = MagicMock()
     mock_blob_client_class.return_value = mock_client
 
-    factory: StorageClientFactory = StorageClientFactory()
-    client: MagicMock = factory.get_client()
+    factory: BlobServiceClientFactory = BlobServiceClientFactory()
+    client: MagicMock = factory.get_service_client()
 
     assert client == mock_client
     mock_credential_class.assert_called_once()
@@ -65,7 +63,7 @@ def test_sync_client_with_cloud(
 
 @pytest.mark.azure_blob_storage
 def test_sync_close_lifecycle(clear_env: ClearEnvFixture) -> None:
-    factory: StorageClientFactory = StorageClientFactory()
+    factory: BlobServiceClientFactory = BlobServiceClientFactory()
     factory._client = MagicMock()
     factory.close()
 
@@ -106,22 +104,27 @@ def test_transport_generate_blob_name(
 @pytest.mark.azure_blob_storage
 def test_transport_send_success(clear_env: ClearEnvFixture) -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport("test-container")
-    mock_client: MagicMock = MagicMock()
+    mock_container_client: MagicMock = MagicMock()
+    mock_service_client: MagicMock = MagicMock()
+    mock_service_client.get_container_client.return_value = mock_container_client
 
     mock_report: MagicMock = MagicMock()
     mock_report.to_bytes.return_value = b"test-report-data"
 
     with (
-        patch.object(transport._client_factory, "get_client", return_value=mock_client),
+        patch.object(
+            transport._service_client_factory,
+            "get_service_client",
+            return_value=mock_service_client,
+        ),
         patch.object(
             transport, "_generate_blob_name", return_value="errors/mock.birgus"
         ),
     ):
         transport.send(mock_report)
 
-    mock_client.upload_blob.assert_called_once_with(
-        container_name="test-container",
-        blob_name="errors/mock.birgus",
+    mock_container_client.upload_blob.assert_called_once_with(
+        name="errors/mock.birgus",
         data=b"test-report-data",
     )
 
@@ -134,27 +137,31 @@ def test_transport_send_client_init_failure(
     mock_report: MagicMock = MagicMock()
 
     with patch.object(
-        transport._client_factory,
-        "get_client",
+        transport._service_client_factory,
+        "get_service_client",
         side_effect=Exception("Initialization failed"),
     ):
         transport.send(mock_report)
 
-    assert "Failed to initialize Azure Blob Storage client" in caplog.text
+    assert "Failed to initialize Azure Blob Storage Service client" in caplog.text
     assert "Initialization failed" in caplog.text
 
 
 @pytest.mark.azure_blob_storage
 def test_transport_send_upload_failure(caplog: pytest.LogCaptureFixture) -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport("test-container")
-    mock_client: MagicMock = MagicMock()
-    mock_client.upload_blob.side_effect = AzureError("Upload failed")
+    mock_container_client: MagicMock = MagicMock()
+    mock_service_client: MagicMock = MagicMock()
+    mock_container_client.upload_blob.side_effect = AzureError("Upload failed")
+    mock_service_client.get_container_client.return_value = mock_container_client
 
     mock_report: MagicMock = MagicMock()
     mock_report.to_bytes.return_value = b"test-report-data"
 
     with patch.object(
-        transport._client_factory, "get_client", return_value=mock_client
+        transport._service_client_factory,
+        "get_service_client",
+        return_value=mock_service_client,
     ):
         transport.send(mock_report)
 
