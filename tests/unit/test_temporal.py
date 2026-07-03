@@ -18,7 +18,7 @@ from birgus.temporal.activities import birgus_send_report
 from birgus.temporal.interceptors import BirgusWorkerInterceptor
 
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 
 @pytest.fixture
