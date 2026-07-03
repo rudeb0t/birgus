@@ -21,7 +21,24 @@ _VALUE_REPR_LIMIT: int = 1000
 
 
 class ExceptionHook:
-    transports: TransportList = DEFAULT_TRANSPORTS
+    _transports: TransportList
+
+    def __init__(self, transports: TransportList | None = None) -> None:
+        if transports is not None:
+            self.transports = transports
+        else:
+            self.transports = DEFAULT_TRANSPORTS
+
+    @property
+    def transports(self) -> TransportList:
+        return self._transports
+
+    @transports.setter
+    def transports(self, transports: TransportList) -> None:
+        if not transports:
+            raise ValueError("At least one transport must be provided.")
+
+        self._transports = transports
 
     def __call__(
         self,
