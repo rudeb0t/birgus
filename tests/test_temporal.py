@@ -53,6 +53,7 @@ class FailingActivityWorkflow:
         )
 
 
+@pytest.mark.temporal
 def test_birgus_send_report(
     activity_env: ActivityEnvironment,
     sample_report_bytes: bytes,
@@ -73,6 +74,7 @@ def test_birgus_send_report(
 
 
 @pytest.mark.asyncio
+@pytest.mark.temporal
 async def test_interceptor(fake_monotonic_ns: int) -> None:
     task_queue = "test-birgus-activity-interceptor"
     with patch("birgus.transports.base.time.monotonic_ns") as mocked_monotonic_ns:

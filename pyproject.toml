@@ -33,8 +33,13 @@ azure-storage = [
 module-name = "birgus"
 module-root = "src"
 
-[tool.pytest.ini_options]
+[tool.pytest]
 asyncio_mode = "auto"
+markers = [
+    "integration: Marks tests as integration tests",
+    "azure_blob_storage: Tests for Azure Blob Storage Transport",
+    "temporal: Marks tests as Temporal Transport tests",
+]
 
 [build-system]
 requires = ["uv_build>=0.11.21,<0.12.0"]

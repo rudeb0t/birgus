@@ -29,6 +29,7 @@ def clear_env() -> Generator[None, None, None]:
 @patch(
     "birgus.transports.azure_blob_storage.SyncBlobServiceClient.from_connection_string"
 )
+@pytest.mark.azure_blob_storage
 def test_sync_client_with_azurite(mock_from_conn_str: MagicMock) -> None:
     os.environ["AZURE_STORAGE_CONNECTION_STRING"] = "SyncConnStr"
     mock_client: MagicMock = MagicMock()
@@ -43,6 +44,7 @@ def test_sync_client_with_azurite(mock_from_conn_str: MagicMock) -> None:
 
 @patch("birgus.transports.azure_blob_storage.SyncDefaultAzureCredential")
 @patch("birgus.transports.azure_blob_storage.SyncBlobServiceClient")
+@pytest.mark.azure_blob_storage
 def test_sync_client_with_cloud(
     mock_blob_client_class: MagicMock, mock_credential_class: MagicMock
 ) -> None:
@@ -57,6 +59,7 @@ def test_sync_client_with_cloud(
     mock_credential_class.assert_called_once()
 
 
+@pytest.mark.azure_blob_storage
 def test_sync_close_lifecycle() -> None:
     factory: StorageClientFactory = StorageClientFactory()
     factory._client = MagicMock()
@@ -70,6 +73,7 @@ def test_sync_close_lifecycle() -> None:
 # =====================================================================
 
 
+@pytest.mark.azure_blob_storage
 def test_transport_init() -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport(
         container_name="test-container", prefix="/test-prefix/"
@@ -80,6 +84,7 @@ def test_transport_init() -> None:
 
 
 @patch("birgus.transports.base.time.monotonic_ns")
+@pytest.mark.azure_blob_storage
 def test_transport_generate_blob_name(mock_monotonic_ns: MagicMock) -> None:
     mock_monotonic_ns.return_value = 772840958865291
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport(
@@ -92,6 +97,7 @@ def test_transport_generate_blob_name(mock_monotonic_ns: MagicMock) -> None:
     assert prefixed_blob_name == "errors/prefix-772840958865291.birgus"
 
 
+@pytest.mark.azure_blob_storage
 def test_transport_send_success() -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport("test-container")
     mock_client: MagicMock = MagicMock()
@@ -114,6 +120,7 @@ def test_transport_send_success() -> None:
     )
 
 
+@pytest.mark.azure_blob_storage
 def test_transport_send_client_init_failure(caplog: pytest.LogCaptureFixture) -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport("test-container")
     mock_report: MagicMock = MagicMock()
@@ -129,6 +136,7 @@ def test_transport_send_client_init_failure(caplog: pytest.LogCaptureFixture) ->
     assert "Initialization failed" in caplog.text
 
 
+@pytest.mark.azure_blob_storage
 def test_transport_send_upload_failure(caplog: pytest.LogCaptureFixture) -> None:
     transport: AzureBlobStorageTransport = AzureBlobStorageTransport("test-container")
     mock_client: MagicMock = MagicMock()
