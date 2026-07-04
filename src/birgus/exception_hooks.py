@@ -8,8 +8,9 @@ import traceback
 import threading
 import warnings
 
+from dataclasses import dataclass
 from types import TracebackType
-from typing import Type, Optional, Any
+from typing import Sequence, Type, Optional, Any
 
 from .classes import FrameList, LocalVarList, SourceContext
 from .exception_report import exception_report
@@ -19,6 +20,12 @@ from .transports import DEFAULT_TRANSPORTS, TransportList
 logger = logging.getLogger(__name__)
 
 _VALUE_REPR_LIMIT: int = 1000
+
+
+@dataclass(frozen=True)
+class SendReportResults:
+    report_name: str
+    transport_names: Sequence[str]
 
 
 class ExceptionHook:
@@ -77,14 +84,21 @@ class ExceptionHook:
         self,
         report: exception_report.ExceptionReport.Builder | bytes,
         name_prefix: str = "",
-    ) -> None:
+    ) -> SendReportResults:
+        report_name = self.generate_name(name_prefix)
+        transport_names = []
         for transport in self.transports:
             try:
-                transport.send(report, self.generate_name(name_prefix))
+                transport.send(report, report_name)
+                transport_names.append(transport.name)
             except Exception as exc:
                 logger.warning(
                     "Failed to send exception report via %r: %r", transport, exc
                 )
+
+        return SendReportResults(
+            report_name=report_name, transport_names=transport_names
+        )
 
 
 exception_hook = ExceptionHook()
