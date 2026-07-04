@@ -171,9 +171,10 @@ def create_report(
     exc_type: Type[BaseException], exc_value: BaseException, traceback: FrameList
 ) -> ExceptionReportBuilder:
     report: ExceptionReportBuilder = ExceptionReport.new_message()
-    report.exceptionType = str(exc_type.__name__)
-    report.exceptionValue = str(exc_value)
+    report.exceptionType = repr(exc_type.__name__)
+    report.exceptionValue = repr(exc_value)
     report.traceback = traceback
+    report.timestamp = time.time()
 
     return report
 

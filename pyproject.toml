@@ -1,6 +1,6 @@
 [project]
 name = "birgus"
-version = "0.1.1"
+version = "0.1.2"
 description = "A lightweight, low-friction library for capturing tracebacks in Python applications."
 readme = "README.md"
 authors = [

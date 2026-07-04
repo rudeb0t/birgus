@@ -25,5 +25,6 @@ struct ExceptionReport {
     exceptionType @0 :Text;
     exceptionValue @1 :Text;
     traceback @2 :List(StackFrame);
+    timestamp @3 :Float64;
 }
 
