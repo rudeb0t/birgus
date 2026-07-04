@@ -1,11 +1,11 @@
 import shutil
 import sys
 
-from ..exception_report import exception_report
+from ..exception_report import ExceptionReport, ExceptionReportReader
 
 f = sys.argv[1]
 with open(f, "rb") as exc_file:
-    report = exception_report.ExceptionReport.read(exc_file)
+    report: ExceptionReportReader = ExceptionReport.read(exc_file)
 
 terminal_size = shutil.get_terminal_size((80, 20))
 stack_frame_sep = terminal_size.columns * "="

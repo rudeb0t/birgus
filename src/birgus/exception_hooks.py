@@ -13,8 +13,8 @@ from types import TracebackType
 from typing import Sequence, Type, Optional, Any
 
 from .classes import FrameList, LocalVarList, SourceContext
-from .exception_report import exception_report
-from .transports import DEFAULT_TRANSPORTS, TransportList
+from .exception_report import ExceptionReport, ExceptionReportBuilder
+from .transports import DEFAULT_TRANSPORTS, TransportList, TransportPayload
 
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class ExceptionHook:
 
     def send_report(
         self,
-        report: exception_report.ExceptionReport.Builder | bytes,
+        report: TransportPayload,
         name_prefix: str = "",
     ) -> SendReportResults:
         report_name = self.generate_name(name_prefix)
@@ -169,8 +169,8 @@ def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
 
 def create_report(
     exc_type: Type[BaseException], exc_value: BaseException, traceback: FrameList
-) -> exception_report.ExceptionReport.Builder:
-    report = exception_report.ExceptionReport.new_message()
+) -> ExceptionReportBuilder:
+    report: ExceptionReportBuilder = ExceptionReport.new_message()
     report.exceptionType = str(exc_type.__name__)
     report.exceptionValue = str(exc_value)
     report.traceback = traceback

@@ -1,4 +1,4 @@
-from .base import AbstractTransport, TransportList
+from .base import AbstractTransport, TransportList, TransportPayload
 from .local_file import LocalFileTransport
 
 
@@ -9,4 +9,5 @@ __all__ = [
     "AbstractTransport",
     "DEFAULT_TRANSPORTS",
     "TransportList",
+    "TransportPayload",
 ]
