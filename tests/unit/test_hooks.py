@@ -20,7 +20,7 @@ def test_exception_hook_writes_report(fake_monotonic_ns: int) -> None:
 
     birgus.install()
 
-    with patch("birgus.transports.base.time.monotonic_ns") as mocked_monotonic_ns:
+    with patch("birgus.exception_hooks.time.monotonic_ns") as mocked_monotonic_ns:
         mocked_monotonic_ns.return_value = fake_monotonic_ns
         try:
             raise ValueError("Test exception")

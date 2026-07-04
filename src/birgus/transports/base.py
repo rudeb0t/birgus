@@ -1,5 +1,3 @@
-import time
-
 from abc import ABC, abstractmethod
 from typing import Sequence
 
@@ -11,15 +9,13 @@ type TransportPayload = ExceptionReportBuilder | ExceptionReportReader | bytes
 
 class AbstractTransport(ABC):
     @abstractmethod
-    def send(
-        self,
-        report: TransportPayload,
-        name_prefix: str = "",
-    ) -> None:
+    def send(self, report: TransportPayload, name: str) -> None:
         pass
 
-    def generate_name(self, name_prefix: str = "") -> str:
-        return f"{name_prefix}{time.monotonic_ns()}.birgus"
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
 
 
 type TransportList = Sequence[AbstractTransport]

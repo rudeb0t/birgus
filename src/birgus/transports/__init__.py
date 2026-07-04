@@ -8,6 +8,5 @@ DEFAULT_TRANSPORTS = [LocalFileTransport()]
 __all__ = [
     "AbstractTransport",
     "DEFAULT_TRANSPORTS",
-    "LocalFileTransport",
     "TransportList",
 ]

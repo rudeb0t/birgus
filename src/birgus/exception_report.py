@@ -8,8 +8,10 @@ exception_report = capnp.load(
 )
 
 if TYPE_CHECKING:
+    ExceptionReport: TypeAlias = capnp.lib.capnp._DynamicStruct
     ExceptionReportReader: TypeAlias = capnp.lib.capnp._DynamicStructReader
     ExceptionReportBuilder: TypeAlias = capnp.lib.capnp._DynamicStructBuilder
 else:
+    ExceptionReport: TypeAlias = exception_report.ExceptionReport
     ExceptionReportBuilder: TypeAlias = exception_report.ExceptionReport.Builder
     ExceptionReportReader: TypeAlias = exception_report.ExceptionReport.Reader

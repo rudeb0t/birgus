@@ -22,18 +22,14 @@ def azurite_storage_connection_string() -> Generator[str, None, None]:
         yield azurite.get_connection_string()
 
 
-@patch("birgus.transports.base.time.monotonic_ns")
 @pytest.mark.azure_blob_storage
 def test_azure_blob_storage_transport(
-    mock_monotonic_ns: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
     azurite_storage_connection_string: str,
 ) -> None:
     monkeypatch.setenv(
         "AZURE_STORAGE_CONNECTION_STRING", azurite_storage_connection_string
     )
-
-    mock_monotonic_ns.return_value = 772840958865291
 
     mock_report: MagicMock = MagicMock()
     mock_report.to_bytes.return_value = b"test-report-data"
@@ -49,7 +45,7 @@ def test_azure_blob_storage_transport(
     with patch.object(
         BlobServiceClientFactory, "get_service_client", return_value=blob_service_client
     ):
-        transport.send(mock_report, name_prefix="test-prefix-")
+        transport.send(mock_report, "test-prefix-772840958865291.birgus")
 
         blob_name: str = "errors/test-prefix-772840958865291.birgus"
         blob_client: ContainerClient = blob_service_client.get_blob_client(

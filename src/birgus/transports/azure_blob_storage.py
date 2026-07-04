@@ -67,14 +67,10 @@ class AzureBlobStorageTransport(AbstractTransport):
         self.prefix = prefix.strip("/")
         self._service_client_factory = BlobServiceClientFactory()
 
-    def _generate_blob_name(self, name_prefix: str = "") -> str:
-        return f"{self.prefix}/{self.generate_name(name_prefix)}".strip("/")
+    def _generate_blob_name(self, name: str) -> str:
+        return f"{self.prefix}/{name}".strip("/")
 
-    def send(
-        self,
-        report: TransportPayload,
-        name_prefix: str = "",
-    ) -> None:
+    def send(self, report: TransportPayload, name: str) -> None:
         try:
             service_client = self._service_client_factory.get_service_client()
         except Exception as exc:
@@ -98,10 +94,14 @@ class AzureBlobStorageTransport(AbstractTransport):
 
         try:
             container_client.upload_blob(
-                name=self._generate_blob_name(name_prefix),
+                name=self._generate_blob_name(name),
                 data=report_bytes,
             )
         except AzureError as exc:
             logger.warning(
                 "Failed to upload exception report to Azure Blob Storage: %s", exc
             )
+
+    @property
+    def name(self) -> str:
+        return "Azure Blob Storage Transport"

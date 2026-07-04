@@ -3,6 +3,7 @@ import importlib.util
 import linecache
 import logging
 import sys
+import time
 import traceback
 import threading
 import warnings
@@ -22,12 +23,20 @@ _VALUE_REPR_LIMIT: int = 1000
 
 class ExceptionHook:
     _transports: TransportList
+    _name_prefix: str
 
-    def __init__(self, transports: TransportList | None = None) -> None:
+    def __init__(
+        self, transports: TransportList | None = None, name_prefix: str | None = None
+    ) -> None:
         if transports is not None:
             self.transports = transports
         else:
             self.transports = DEFAULT_TRANSPORTS
+
+        if name_prefix is not None:
+            self.name_prefix = name_prefix
+        else:
+            self.name_prefix = ""
 
     @property
     def transports(self) -> TransportList:
@@ -39,6 +48,14 @@ class ExceptionHook:
             raise ValueError("At least one transport must be provided.")
 
         self._transports = transports
+
+    @property
+    def name_prefix(self) -> str:
+        return self._name_prefix
+
+    @name_prefix.setter
+    def name_prefix(self, name_prefix: str) -> None:
+        self._name_prefix = name_prefix
 
     def __call__(
         self,
@@ -52,6 +69,10 @@ class ExceptionHook:
         self.send_report(report)
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
+    def generate_name(self, name_prefix: str = "") -> str:
+        _name_prefix = name_prefix or self.name_prefix
+        return f"{_name_prefix}{time.monotonic_ns()}.birgus"
+
     def send_report(
         self,
         report: exception_report.ExceptionReport.Builder | bytes,
@@ -59,7 +80,7 @@ class ExceptionHook:
     ) -> None:
         for transport in self.transports:
             try:
-                transport.send(report, name_prefix)
+                transport.send(report, self.generate_name(name_prefix))
             except Exception as exc:
                 logger.warning(
                     "Failed to send exception report via %r: %r", transport, exc
