@@ -6,6 +6,7 @@ class LocalVarDict(TypedDict):
     typeName: str
     valueRepr: str
     valueTrunc: bool
+    valueLen: int
 
 
 type LocalVarList = List[LocalVarDict]

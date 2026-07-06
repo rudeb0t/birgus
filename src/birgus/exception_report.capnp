@@ -11,6 +11,7 @@ struct Variable {
     typeName @1 :Text;
     valueRepr @2 :Text;
     valueTrunc @3 :Bool;
+    valueLen @4 :Int64;
 }
 
 struct StackFrame {

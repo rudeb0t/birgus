@@ -16,3 +16,4 @@ repos:
     additional_dependencies:
     - "pytest>=9.1.1"
     - "temporalio>=1.29.0"
+    - "textual[syntax]>=8.2.8"

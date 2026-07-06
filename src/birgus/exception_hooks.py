@@ -20,6 +20,7 @@ from .transports import DEFAULT_TRANSPORTS, TransportList, TransportPayload
 logger = logging.getLogger(__name__)
 
 _VALUE_REPR_LIMIT: int = 1000
+_DEFAULT_CONTEXT_LINES: int = 5
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,10 @@ class ExceptionHook:
     _name_prefix: str
 
     def __init__(
-        self, transports: TransportList | None = None, name_prefix: str | None = None
+        self,
+        transports: TransportList | None = None,
+        name_prefix: str | None = None,
+        source_context_lines: int = _DEFAULT_CONTEXT_LINES,
     ) -> None:
         if transports is not None:
             self.transports = transports
@@ -44,6 +48,8 @@ class ExceptionHook:
             self.name_prefix = name_prefix
         else:
             self.name_prefix = ""
+
+        self.source_context_lines = source_context_lines
 
     @property
     def transports(self) -> TransportList:
@@ -105,7 +111,7 @@ exception_hook = ExceptionHook()
 
 
 def get_source_context(
-    filename: str, target_lineno: int, context_lines: int = 2
+    filename: str, target_lineno: int, context_lines: int = _DEFAULT_CONTEXT_LINES
 ) -> SourceContext:
     source_lines: SourceContext = []
 
@@ -126,7 +132,10 @@ def get_source_context(
     return source_lines
 
 
-def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
+def extract_traceback_data(
+    exc_traceback: Optional[TracebackType],
+    source_context_lines: int = _DEFAULT_CONTEXT_LINES,
+) -> FrameList:
     frames: FrameList = []
 
     for frame_obj, lineno in traceback.walk_tb(exc_traceback):
@@ -136,8 +145,9 @@ def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
             value_trunc = False
             try:
                 value_repr = repr(value)
-                if len(value_repr) > _VALUE_REPR_LIMIT:
-                    value_repr = value_repr[:_VALUE_REPR_LIMIT] + "..."
+                value_len = len(value_repr)
+                if value_len > _VALUE_REPR_LIMIT:
+                    value_repr = value_repr[:_VALUE_REPR_LIMIT]
                     value_trunc = True
 
             except Exception:
@@ -149,6 +159,7 @@ def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
                     "typeName": type(value).__name__,
                     "valueRepr": value_repr,
                     "valueTrunc": value_trunc,
+                    "valueLen": value_len,
                 }
             )
 
@@ -159,7 +170,7 @@ def extract_traceback_data(exc_traceback: Optional[TracebackType]) -> FrameList:
                 "functionName": frame_obj.f_code.co_name,
                 "locals": local_vars,
                 "sourceContext": get_source_context(
-                    frame_obj.f_code.co_filename, lineno
+                    frame_obj.f_code.co_filename, lineno, source_context_lines
                 ),
             }
         )
