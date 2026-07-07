@@ -43,7 +43,7 @@ class BirgusWorkflowInterceptor(WorkflowInboundInterceptor):
             exc_traceback = exc.__traceback__
             traceback: FrameList = extract_traceback_data(exc_traceback)
             report = create_report(exc_type, exc_value, traceback)
-            await workflow.execute_local_activity(
+            await workflow.execute_activity(
                 birgus_send_report,
                 args=(report.to_bytes(), "workflow-"),
                 start_to_close_timeout=timedelta(seconds=10),

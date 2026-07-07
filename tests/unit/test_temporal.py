@@ -102,7 +102,6 @@ async def test_interceptor_no_retries(fake_monotonic_ns: int) -> None:
     assert os.path.exists(f"activity-{fake_monotonic_ns}.birgus")
     assert os.path.exists(f"workflow-{fake_monotonic_ns}.birgus")
 
-    return
     for globbed_file in glob.glob("*.birgus"):
         try:
             os.remove(globbed_file)
